@@ -9,18 +9,18 @@ pi = pigpio.pi()
 
 PWM_FREQ = 25000        # 25kHZ
 
-FAN_PIN = 18            #
+FAN_PIN = 18            # BCM pin used to drive PWM fan
+WAIT_TIME = 1           # [s] Time to wait between each refresh
 
-WAIT_TIME = 1           # [s] time between refreshs
-
-OFF_TEMP = 40           # [C] temp below fan off
-MIN_TEMP = 45           # [C] temp above fan start
-MAX_TEMP = 70           # [C] temp above fan at max
-FAN_LOW = 20            # [%] fan speed
-FAN_OFF = 0             # [%] fan speed
-FAN_HIGH = 100          # [%] fan speed
-
+OFF_TEMP = 40           # [°C] temperature below which to stop the fan
+MIN_TEMP = 45           # [°C] temperature above which to start the fan
+MAX_TEMP = 70           # [°C] temperature at which to operate at max fan speed
+FAN_LOW = 1
+FAN_HIGH = 100
+FAN_OFF = 0
+FAN_MAX = 100
 FAN_GAIN = float(FAN_HIGH - FAN_LOW) / float(MAX_TEMP - MIN_TEMP)
+
 
 def getCpuTemperature ():
         with open('/sys/class/thermal/thermal_zone0/temp') as f:
@@ -41,11 +41,14 @@ def handleFanSpeed(temperature):
                 controlFan(FAN_OFF)
 
 try:
+    signal.signal(signal.SIGTERM, lambda *args: sys.exit(0))
+    while True:
+        handleFanSpeed(getCpuTemperature())
+        time.sleep(WAIT_TIME)
 
-        while True:
-                handleFanSpeed(getCpuTemperature())
-                time.sleep(WAIT_TIME)
 
 except KeyboardInterrupt:
         controlFan(FAN_HIGH *  10000)
         pi.stop()
+
+
